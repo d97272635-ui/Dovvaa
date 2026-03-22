@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>David's Art</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-black text-white">
+
+<!-- NAV -->
+<nav class="p-4 flex justify-between items-center border-b border-white/10">
+  <h1 class="text-xl font-bold">David’s Art</h1>
+  <button id="cart-toggle">Cart 🛒</button>
+</nav>
+
+<!-- HERO -->
+<section class="p-6 text-center">
+  <h1 class="text-4xl font-bold">Hyperrealistic Art</h1>
+  <p class="text-gray-400 mt-2">F1 • Architecture • Custom Commissions</p>
+  <p class="text-green-400 text-sm mt-2">Free shipping over €100</p>
+</section>
+
+<!-- SEARCH -->
+<div class="p-4">
+  <input id="search-input" placeholder="Search artwork..."
+    class="w-full p-2 bg-black border border-white/20">
+</div>
+
+<!-- GALLERY -->
+<div id="gallery" class="grid grid-cols-2 gap-4 p-4"></div>
+
+<!-- CART -->
+<div id="cart" class="fixed right-0 top-0 w-80 h-full bg-black border-l border-white/10 p-4 hidden">
+  <h2 class="text-xl mb-4">Cart</h2>
+  <div id="cart-items"></div>
+  <button id="checkout-btn" class="mt-4 bg-white text-black p-2 w-full">Checkout</button>
+</div>
+
+<!-- COMMISSION -->
+<div class="p-6 border-t border-white/10">
+  <h2 class="text-2xl mb-4">Order Commission</h2>
+
+  <div class="flex gap-2">
+    <div class="size-card border p-2 cursor-pointer" data-size="A4" onclick="selectSize(this)">A4 €50</div>
+    <div class="size-card border p-2 cursor-pointer" data-size="A3" onclick="selectSize(this)">A3 €90</div>
+    <div class="size-card border p-2 cursor-pointer" data-size="A2" onclick="selectSize(this)">A2 €150</div>
+  </div>
+
+  <button onclick="orderCommission()" class="mt-4 bg-white text-black p-2">Order Commission</button>
+</div>
+
+<!-- CONTACT -->
+<form id="contact-form" class="p-6 border-t border-white/10">
+  <h2 class="text-xl mb-2">Contact</h2>
+  <input id="contact-name" placeholder="Name" class="block w-full mb-2 p-2 bg-black border">
+  <input id="contact-email" placeholder="Email" class="block w-full mb-2 p-2 bg-black border">
+  <textarea id="contact-message" placeholder="Message" class="block w-full mb-2 p-2 bg-black border"></textarea>
+  <button id="submit-btn" class="bg-white text-black p-2">Send</button>
+</form>
+
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-white text-black px-4 py-2 hidden"></div>
+
+<script>
+
+// ===== DATA =====
+const galleryItems = [
+  {
+    title: "Ferrari F1 Drawing",
+    category: "F1",
+    description: "Hyperrealistic Ferrari",
+    price: 80,
+    image: "https://via.placeholder.com/400"
+  },
+  {
+    title: "Rose Drawing",
+    category: "Flowers",
+    description: "Detailed rose",
+    price: 60,
+    image: "https://via.placeholder.com/400"
+  }
+];
+
+// ===== CART =====
+let currentCart = JSON.parse(localStorage.getItem("cart")) || [];
+
+function saveCart() {
+  localStorage.setItem("cart", JSON.stringify(currentCart));
+}
+
+// ===== RENDER =====
+function renderGallery(items = galleryItems) {
+  const el = document.getElementById('gallery');
+  el.innerHTML = "";
+
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <img src="${item.image}" class="w-full h-40 object-cover">
+      <p>${item.title}</p>
+      <p>€${item.price}</p>
+      <p class="text-red-400 text-xs">Only 2 left</p>
+      <button onclick='addToCart(${JSON.stringify(item)})' class="bg-white text-black w-full mt-2">Add</button>
+    `;
+    el.appendChild(div);
+  });
+}
+
+function renderCart() {
+  const el = document.getElementById('cart-items');
+  el.innerHTML = "";
+
+  currentCart.forEach(item => {
+    const div = document.createElement('div');
+    div.innerHTML = `<p>${item.title} x${item.quantity}</p>`;
+    el.appendChild(div);
+  });
+}
+
+// ===== ADD TO CART =====
+function addToCart(item) {
+  const found = currentCart.find(i => i.title === item.title);
+  if (found) {
+    found.quantity++;
+  } else {
+    item.quantity = 1;
+    currentCart.push(item);
+  }
+  saveCart();
+  renderCart();
+  showToast("Added to cart");
+}
+
+// ===== CHECKOUT =====
+document.getElementById('checkout-btn').onclick = () => {
+  const subtotal = currentCart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const tax = subtotal * 0.23;
+  const shipping = subtotal > 100 ? 0 : 5;
+  const total = (subtotal + tax + shipping).toFixed(2);
+
+  const details = currentCart.map(i => `${i.title} x${i.quantity}`).join(', ');
+  const note = encodeURIComponent(`Art Order: ${details}`);
+
+  window.open(`https://revolut.me/davide44k?amount=${total}&note=${note}`);
+};
+
+// ===== CART TOGGLE =====
+document.getElementById('cart-toggle').onclick = () => {
+  document.getElementById('cart').classList.toggle('hidden');
+  renderCart();
+};
+
+// ===== SEARCH =====
+document.getElementById('search-input').addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase();
+  const filtered = galleryItems.filter(i =>
+    i.title.toLowerCase().includes(q) ||
+    i.category.toLowerCase().includes(q)
+  );
+  renderGallery(filtered);
+});
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 2000);
+}
+
+// ===== COMMISSION =====
+function selectSize(el) {
+  document.querySelectorAll('.size-card').forEach(e => e.classList.remove('bg-white','text-black'));
+  el.classList.add('bg-white','text-black');
+}
+
+function orderCommission() {
+  const selected = document.querySelector('.size-card.bg-white');
+  if (!selected) return showToast("Select a size");
+
+  const size = selected.dataset.size;
+  const prices = { A4:50, A3:90, A2:150 };
+
+  const note = encodeURIComponent(`Commission ${size}`);
+  window.open(`https://revolut.me/davide44k?amount=${prices[size]}&note=${note}`);
+}
+
+// ===== CONTACT FIX =====
+document.getElementById('contact-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const btn = document.getElementById('submit-btn');
+  btn.innerText = "Sending...";
+  btn.disabled = true;
+
+  const formData = new FormData();
+  formData.append("name", document.getElementById('contact-name').value);
+  formData.append("email", document.getElementById('contact-email').value);
+  formData.append("message", document.getElementById('contact-message').value);
+  formData.append("_captcha", "false");
+
+  fetch("https://formsubmit.co/d97272635@gmail.com", {
+    method: "POST",
+    body: formData
+  })
+  .then(() => {
+    showToast("Message sent!");
+    btn.innerText = "Send";
+    btn.disabled = false;
+    e.target.reset();
+  })
+  .catch(() => {
+    showToast("Error sending");
+    btn.innerText = "Send";
+    btn.disabled = false;
+  });
+});
+
+// INIT
+renderGallery();
+
+</script>
+</body>
+</html>
